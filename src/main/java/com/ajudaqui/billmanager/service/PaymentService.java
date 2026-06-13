@@ -33,6 +33,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import javassist.NotFoundException;
+
 @Service
 public class PaymentService {
 
@@ -43,7 +45,7 @@ public class PaymentService {
   private CategoryService categoryService;
 
   public PaymentService(PaymentsRepository paymentRepository, UsersService usersService,
-      CategoryService categoryService, JwtUtils jwtUtils ) {
+      CategoryService categoryService, JwtUtils jwtUtils) {
     this.paymentRepository = paymentRepository;
     this.usersService = usersService;
     this.categoryService = categoryService;
@@ -70,6 +72,19 @@ public class PaymentService {
 
   public Payment update(Payment payment) {
     return save(payment);
+  }
+
+  private List<Payment> buscarNovasOcorrenciasDoBoletoId(String accessToken, Long paymentId) {
+
+    List<Payment> payment = paymentRepository.buscarNovasOcorrenciasDoBoletoId(paymentId);
+
+    if (payment.isEmpty())
+      throw new MsgException("Nenhum boleto localizado");
+
+    if (!accessToken.equals(payment.get(0).getUser().getAccessToken()))
+      throw new MsgException("Solicitaã́o não autorizada");
+    return payment;
+
   }
 
   public List<Payment> boletosRecorrentes(PayamentDto paymentDto, Long repeticao, String accessToken) {
@@ -142,22 +157,19 @@ public class PaymentService {
   }
 
   public Payment update(String accessToken, Long paymentId, BoletoFrom from) {
-    Payment payment = findByIdForUsers(accessToken, paymentId);
-    if (!from.getDescription().isEmpty())
-      payment.setDescription(from.getDescription());
-    if (from.getValue() != null)
-      payment.setValue(from.getValue());
-    if (from.getDueDate() != null)
-      payment.setDueDate(from.getDueDate());
+
+    List<Payment> payments = buscarNovasOcorrenciasDoBoletoId(accessToken, paymentId);
+    Category category = null;
     if (from.getCategory() != null && !from.getCategory().isEmpty()) {
-      Category category = categoryService.findByNameOrRegister(from.getCategory(), payment.getUser());
-      payment.setCategory(category);
+      category = categoryService.findByNameOrRegister(from.getCategory(), payments.get(0).getUser());
     }
-    payment.setUpdatedAt(now());
-    // if (payment.getUser().isCalControl()) {
-    // sendToKafka(payloadPayments(accessToken, payment.getDueDate()),ATT_PAYMENT);
-    // }
-    return save(statusAtualizado(payment));
+
+    for (Payment payment : payments) {
+      payment = from.toUpdate(payment, category);
+      save(statusAtualizado(payment));
+    }
+
+    return payments.get(0);
   }
 
   private void sendToKafka(Map<String, Object> payloadPayments, String topic) {

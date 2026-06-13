@@ -2,7 +2,9 @@ package com.ajudaqui.billmanager.controller.from;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
+import com.ajudaqui.billmanager.entity.Category;
 import com.ajudaqui.billmanager.entity.Payment;
 import com.ajudaqui.billmanager.utils.StatusBoleto;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -23,6 +25,24 @@ public class BoletoFrom {
     payament.setStatus(StatusBoleto.valueOf(status));
 
     return payament;
+  }
+
+  public Payment toUpdate(Payment payment, Category category) {
+
+    if (!description.isEmpty())
+      payment.setDescription(description);
+
+    if (this.value != null)
+      payment.setValue(this.value);
+
+    if (this.due_date != null)
+      payment.setDueDate(this.due_date);
+
+    if (this.category != null && !this.category.isEmpty()) {
+      payment.setCategory(category);
+    }
+    payment.setUpdatedAt(LocalDateTime.now());
+    return payment;
   }
 
   public void setStatus(String status) {

@@ -94,6 +94,31 @@ public class PaymentServiceTest {
     assertEquals(BigDecimal.TEN, updated.getValue());
   }
 
+  @DisplayName("Deve atualizar o valor do pagamento")
+  @Test
+  void deveAtualizarParaTodasAsOcorrencias() {
+    String accessToken = "token";
+    Long paymentId = 1L;
+    Payment payment = new Payment();
+    payment.setValue(BigDecimal.ONE);
+
+    Users user = new Users();
+    user.setCalControl(false);
+    payment.setUser(user);
+
+    when(jwtUtils.getAccessTokenFromJwt(accessToken)).thenCallRealMethod();
+    BoletoFrom from = new BoletoFrom();
+    from.setDescription("descrição");
+    from.setValue(BigDecimal.TEN);
+    from.setDueDate(LocalDate.now().plusDays(10));
+
+    when(paymentsRepository.findByIdForUsers(accessToken, paymentId)).thenReturn(Optional.of(payment));
+    when(paymentsRepository.save(any(Payment.class))).thenAnswer(i -> i.getArgument(0));
+
+    Payment updated = paymentService.update(accessToken, paymentId, from);
+    assertEquals(BigDecimal.TEN, updated.getValue());
+  }
+
   @DisplayName("Deve atualizar a data de vencimento do pagamento")
   @Test
   void shouldUpdatePaymentDueDate() {
