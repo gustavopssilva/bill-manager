@@ -12,9 +12,7 @@ import java.util.*;
 
 import com.ajudaqui.billmanager.config.serucity.JwtUtils;
 import com.ajudaqui.billmanager.controller.from.BoletoFrom;
-import com.ajudaqui.billmanager.entity.Category;
-import com.ajudaqui.billmanager.entity.Payment;
-import com.ajudaqui.billmanager.entity.Users;
+import com.ajudaqui.billmanager.entity.*;
 import com.ajudaqui.billmanager.exception.MsgException;
 import com.ajudaqui.billmanager.repository.PaymentsRepository;
 import com.ajudaqui.billmanager.service.vo.PayamentDto;
@@ -54,6 +52,7 @@ public class PaymentServiceTest {
 
     Users user = new Users();
     user.setCalControl(false);
+    user.setAccessToken(accessToken);
     payment.setUser(user);
 
     when(jwtUtils.getAccessTokenFromJwt(accessToken)).thenCallRealMethod();
@@ -61,7 +60,8 @@ public class PaymentServiceTest {
     from.setDescription("descrição");
     from.setValue(BigDecimal.TEN);
     from.setDueDate(LocalDate.now().plusDays(10));
-    when(paymentsRepository.findByIdForUsers(accessToken, paymentId)).thenReturn(Optional.of(payment));
+
+    when(paymentsRepository.buscarNovasOcorrenciasDoBoletoId(paymentId)).thenReturn(List.of(payment));
     when(paymentsRepository.save(any(Payment.class))).thenAnswer(i -> i.getArgument(0));
 
     Payment updated = paymentService.update(accessToken, paymentId, from);
@@ -79,6 +79,7 @@ public class PaymentServiceTest {
 
     Users user = new Users();
     user.setCalControl(false);
+    user.setAccessToken(accessToken);
     payment.setUser(user);
 
     when(jwtUtils.getAccessTokenFromJwt(accessToken)).thenCallRealMethod();
@@ -87,14 +88,14 @@ public class PaymentServiceTest {
     from.setValue(BigDecimal.TEN);
     from.setDueDate(LocalDate.now().plusDays(10));
 
-    when(paymentsRepository.findByIdForUsers(accessToken, paymentId)).thenReturn(Optional.of(payment));
+    when(paymentsRepository.buscarNovasOcorrenciasDoBoletoId(paymentId)).thenReturn(List.of(payment));
     when(paymentsRepository.save(any(Payment.class))).thenAnswer(i -> i.getArgument(0));
 
     Payment updated = paymentService.update(accessToken, paymentId, from);
     assertEquals(BigDecimal.TEN, updated.getValue());
   }
 
-  @DisplayName("Deve atualizar o valor do pagamento")
+  @DisplayName("Deve atualizar para todas as ocorrencias")
   @Test
   void deveAtualizarParaTodasAsOcorrencias() {
     String accessToken = "token";
@@ -102,8 +103,17 @@ public class PaymentServiceTest {
     Payment payment = new Payment();
     payment.setValue(BigDecimal.ONE);
 
+    Payment payment_2 = new Payment();
+    payment.setValue(BigDecimal.ONE);
+
+    Payment payment_3 = new Payment();
+    payment.setValue(BigDecimal.ONE);
+
     Users user = new Users();
     user.setCalControl(false);
+    user.setAccessToken(accessToken);
+    payment_3.setUser(user);
+    payment_2.setUser(user);
     payment.setUser(user);
 
     when(jwtUtils.getAccessTokenFromJwt(accessToken)).thenCallRealMethod();
@@ -112,11 +122,14 @@ public class PaymentServiceTest {
     from.setValue(BigDecimal.TEN);
     from.setDueDate(LocalDate.now().plusDays(10));
 
-    when(paymentsRepository.findByIdForUsers(accessToken, paymentId)).thenReturn(Optional.of(payment));
+    when(paymentsRepository.buscarNovasOcorrenciasDoBoletoId(paymentId))
+        .thenReturn(List.of(payment, payment_2, payment_3));
     when(paymentsRepository.save(any(Payment.class))).thenAnswer(i -> i.getArgument(0));
 
     Payment updated = paymentService.update(accessToken, paymentId, from);
     assertEquals(BigDecimal.TEN, updated.getValue());
+    verify(paymentsRepository, times(3)).save(any(Payment.class));
+
   }
 
   @DisplayName("Deve atualizar a data de vencimento do pagamento")
@@ -129,6 +142,7 @@ public class PaymentServiceTest {
 
     Users user = new Users();
     user.setCalControl(false);
+    user.setAccessToken(accessToken);
     payment.setUser(user);
 
     when(jwtUtils.getAccessTokenFromJwt(accessToken)).thenCallRealMethod();
@@ -137,7 +151,8 @@ public class PaymentServiceTest {
 
     from.setDescription("descrição");
     from.setValue(BigDecimal.TEN);
-    when(paymentsRepository.findByIdForUsers(accessToken, paymentId)).thenReturn(Optional.of(payment));
+
+    when(paymentsRepository.buscarNovasOcorrenciasDoBoletoId(paymentId)).thenReturn(List.of(payment));
     when(paymentsRepository.save(any(Payment.class))).thenAnswer(i -> i.getArgument(0));
 
     Payment updated = paymentService.update(accessToken, paymentId, from);
@@ -153,6 +168,7 @@ public class PaymentServiceTest {
 
     Users user = new Users();
     user.setCalControl(false);
+    user.setAccessToken(accessToken);
     payment.setUser(user);
 
     when(jwtUtils.getAccessTokenFromJwt(accessToken)).thenCallRealMethod();
@@ -160,7 +176,7 @@ public class PaymentServiceTest {
     from.setDescription("descrição");
     from.setValue(BigDecimal.TEN);
     from.setDueDate(LocalDate.now().plusDays(10));
-    when(paymentsRepository.findByIdForUsers(accessToken, paymentId)).thenReturn(Optional.of(payment));
+    when(paymentsRepository.buscarNovasOcorrenciasDoBoletoId(paymentId)).thenReturn(List.of(payment));
     when(paymentsRepository.save(any(Payment.class))).thenAnswer(i -> i.getArgument(0));
 
     Payment updated = paymentService.update(accessToken, paymentId, from);
@@ -175,6 +191,7 @@ public class PaymentServiceTest {
     Payment payment = new Payment();
     Users user = new Users();
     user.setCalControl(false);
+    user.setAccessToken(accessToken);
     payment.setUser(user);
 
     BoletoFrom from = new BoletoFrom();
@@ -183,7 +200,8 @@ public class PaymentServiceTest {
     from.setDueDate(LocalDate.now().plusDays(10));
 
     when(jwtUtils.getAccessTokenFromJwt(accessToken)).thenCallRealMethod();
-    when(paymentsRepository.findByIdForUsers(accessToken, paymentId)).thenReturn(Optional.of(payment));
+
+    when(paymentsRepository.buscarNovasOcorrenciasDoBoletoId(paymentId)).thenReturn(List.of(payment));
     when(paymentsRepository.save(any(Payment.class))).thenAnswer(i -> i.getArgument(0));
 
     paymentService.update(accessToken, paymentId, from);

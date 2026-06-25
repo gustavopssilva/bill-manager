@@ -82,7 +82,7 @@ public class PaymentService {
       throw new MsgException("Nenhum boleto localizado");
 
     if (!accessToken.equals(payment.get(0).getUser().getAccessToken()))
-      throw new MsgException("Solicitaã́o não autorizada");
+      throw new MsgException("Solicitão não autorizada");
     return payment;
 
   }
